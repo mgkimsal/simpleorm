@@ -41,7 +41,7 @@ class orm {
     }
 
     static public function init() {
-	unlink("./cache");
+	@unlink("./cache");
 	if($f = @file_get_contents("./cache")) {
 	    $temp = unserialize($f);
 	    self::$_all_domains = $temp['domains'];
