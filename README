@@ -1,6 +1,28 @@
+Author: mgkimsal@gmail.com
+
+Description:
 This is a basic attempt at trying to bring the simplicity of GORM (from Grails) to PHP.
 
 No XML files, no INI config files - everything should be deduced from looking at domain 
 models, determining relationships, building SQL, with sensible defaults.
 
-mgkimsal@gmail.com
+Demo usage:
+From the command line, run 
+>php tables.php
+
+This will dump the create statements for the domain objects listed in /domain
+
+Run those in MySQL (hardcoded to mysql right now as a first pass)
+
+Now run 
+>php index.php
+
+This will output something like:
+
+person has 0 books
+adding book id 17 to person 10
+person has 1 books
+adding book id 18 to person 10
+person has 1 books
+
+
