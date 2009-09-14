@@ -1,0 +1,6 @@
+This is a basic attempt at trying to bring the simplicity of GORM (from Grails) to PHP.
+
+No XML files, no INI config files - everything should be deduced from looking at domain 
+models, determining relationships, building SQL, with sensible defaults.
+
+mgkimsal@gmail.com
