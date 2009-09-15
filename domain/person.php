@@ -15,7 +15,7 @@ class person extends orm {
 		return array("books"=>"book");
 	}
 
-	static public function types() {
+	static public function column_types() {
 		return array("email"=>"Email");
 	}
 

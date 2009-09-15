@@ -15,7 +15,6 @@ class orm {
 
     protected $current_dsn = '';
     protected $table_name = '';
-    static protected $types = array();
     static protected $_dsn = array();
     static public $_listeners = array();
 
@@ -62,7 +61,7 @@ class orm {
      *	"price"=>"float"
      * );
      */
-    static public function types() {
+    static public function column_types() {
 	return array();
     }
 
@@ -226,7 +225,7 @@ class orm {
 	$props = $this->__get_props();
 	$finalTypes = array();
 
-	$types = $currentClass::types();
+	$types = $currentClass::column_types();
 
 	foreach($props as $key=>$prop) {
 	    if(is_object($prop)) {
