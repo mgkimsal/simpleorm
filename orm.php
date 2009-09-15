@@ -5,15 +5,18 @@
  */
 class orm {
 
-    static private $path = "";
-    static public $_relations = array();
-    static public $_all_domains = array();
     public $id = NULL;
+    public $dateCreated = NULL:
+    public $dateUpdated = NULL;
+
+    static private $path = "";
+    static public $__relations = array();
+    static public $__all_domains = array();
     protected $_has_one = array();
     protected $_has_many = array();
     protected $_props = array();
-    protected $_dirty = false;
-    protected $_cached = array();
+    protected $__dirty = false;
+    protected $__cached = array();
 
     protected $current_dsn = '';
     protected $table_name = '';
@@ -44,8 +47,8 @@ class orm {
 	@unlink("./cache");
 	if($f = @file_get_contents("./cache")) {
 	    $temp = unserialize($f);
-	    self::$_all_domains = $temp['domains'];
-	    self::$_relations = $temp['relations'];
+	    self::$__all_domains = $temp['domains'];
+	    self::$__relations = $temp['relations'];
 	} else {
 
 	    $files = glob(self::$path."*php");
@@ -55,22 +58,22 @@ class orm {
 		@include($file);
 
 		$props = self::__get_props_for_class($class);
-		self::$_relations[$class]['has_many'] = $props['extra']['_has_many'];
-		self::$_relations[$class]['has_one'] = $props['extra']['_has_one'];
+		self::$__relations[$class]['has_many'] = $props['extra']['_has_many'];
+		self::$__relations[$class]['has_one'] = $props['extra']['_has_one'];
 
 		foreach($props['extra']['_has_many'] as $k=>$v) {
-		    self::$_relations[$v]['owned_by'][] = $class;
+		    self::$__relations[$v]['owned_by'][] = $class;
 		}
 		foreach($props['extra']['_has_one'] as $k=>$v) {
-		    self::$_relations[$v]['owned_by'][] = $class;
+		    self::$__relations[$v]['owned_by'][] = $class;
 		}
 
-		self::$_all_domains[$class] = $class;
+		self::$__all_domains[$class] = $class;
 		unset($temp);
 	    }
 
-	    $data['relations'] = self::$_relations;
-	    $data['domains'] = self::$_all_domains;
+	    $data['relations'] = self::$__relations;
+	    $data['domains'] = self::$__all_domains;
 	    file_put_contents("./cache", serialize($data));
 
 	}
@@ -98,7 +101,7 @@ class orm {
 
     static public function show_all_table_create() {
 	ob_start();
-	foreach(self::$_all_domains as $domain) {
+	foreach(self::$__all_domains as $domain) {
 	    $temp = new $domain();
 	    echo $temp->__getSQL();
 	    echo "\n";
@@ -118,15 +121,15 @@ class orm {
 	     */
 	    if(array_key_exists($name, $this->_has_many)) {
 #				return $this->load_related_many($this->_has_many[$name]);
-		if($this->_cached[$name]==null) {
-		    $this->_cached[$name] = $this->load_related_many($this->_has_many[$name]);
+		if($this->__cached[$name]==null) {
+		    $this->__cached[$name] = $this->load_related_many($this->_has_many[$name]);
 		}
-		return $this->_cached[$name];
+		return $this->__cached[$name];
 	    } elseif (array_key_exists($name, $this->_has_one)) {
-		if($this->_cached[$name]==null) {
-		    $this->_cached[$name] = $this->load_related_one($this->_has_many[$name]);
+		if($this->__cached[$name]==null) {
+		    $this->__cached[$name] = $this->load_related_one($this->_has_many[$name]);
 		}
-		return $this->_cached[$name];
+		return $this->__cached[$name];
 	    } else {
 		return $this->$name;
 	    }
@@ -134,7 +137,7 @@ class orm {
     }
 
     public function __set($name, $value) {
-	$this->_dirty = true;
+	$this->__dirty = true;
 	$this->cached[$name] = null;
 	if(method_exists($this, "set$name")) {
 	    return $this->{"set$name"}($value);
@@ -143,21 +146,11 @@ class orm {
 	    if($currentValue == $value) {
 		return true;
 	    } else {
-		$this->_dirty = true;
+		$this->__dirty = true;
 		$this->cached[$name] = null;
 		$this->notify_listeners($name, $currentValue, $value);
 		return $this->$name = $value;
 	    }
-	}
-    }
-
-    static function add_listener(ormListener $listener) {
-	self::$_listeners[] = $listener;
-    }
-
-    public function notify_listeners($propertyName, $oldValue, $newValue) {
-	foreach(self::$_listeners as $l) {
-	    $l->notifyPropertyChanged($propertyName, $oldValue, $newValue);
 	}
     }
 
@@ -178,7 +171,7 @@ class orm {
 		}
 	    }
 
-	    $relations = orm::$_relations[$currentClass];
+	    $relations = orm::$__relations[$currentClass];
 	    if(!empty($relations['owned_by'])) {
 		foreach($relations['owned_by'] as $owner) {
 		    $this->_props[$owner."_id"] = "relation";
@@ -214,7 +207,7 @@ class orm {
 	 */
 	$foreign_keys = array();
 	$f_keys = '';
-	$relations = orm::$_relations[$currentClass];
+	$relations = orm::$__relations[$currentClass];
 	if(!empty($relations['owned_by'])) {
 	    foreach($relations['owned_by'] as $owner) {
 		$finalTypes[$owner."_id"] = "int";
@@ -292,7 +285,6 @@ class orm {
     public function load($id) {
 	$props = $this->__get_props();
 	$sql = "select * from ".$this->table_name." where id=".(int)$id;
-	echo $sql."\n";
 	$this->get_one($sql);
 	return true;
     }
@@ -313,7 +305,7 @@ class orm {
 	    foreach($rows[0] as $k=>$v) {
 		$this->$k = $v;
 	    }
-	    $this->_dirty = false;
+	    $this->__dirty = false;
 	    return true;
 	} else {
 	    return false;
@@ -339,7 +331,7 @@ class orm {
 	    $sql .= "(".implode(",", array_fill(0,count($p),"?" )).")";
 
 	} else {
-	    if($this->_dirty == false ) {
+	    if($this->__dirty == false ) {
 		return true;
 	    }
 	    $sql = "update ".$this->table_name." set ";
@@ -356,7 +348,7 @@ class orm {
 
 	$st = $conn->prepare($sql);
 	$st->execute($vals);
-	$this->_dirty = false;
+	$this->__dirty = false;
 	$id = $conn->lastInsertId();
 	if($id>0) {
 	    $this->id = $id;
@@ -370,7 +362,6 @@ class orm {
 	}
 
 	$sql = "select id from $table where ".$this->table_name."_id = ".$this->id;
-	echo $sql."\n";
 	$conn = $this->get_connection();
 	$all = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 	foreach($all as $a) {
@@ -387,7 +378,6 @@ class orm {
 	    throw new Exception("id is null");
 	}
 	$sql = "select id from $table where ".$this->table_name."_id = ".$this->id;
-	echo $sql."\n";
 	$conn = $this->get_connection();
 	$all = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 	$temp = new $table();
@@ -429,6 +419,18 @@ class orm {
 	// why don't I need to add it in with the array_merge?
 	// cause the magic __get on $target auto-reloads it???
     }
+
+
+    static function add_listener(ormListener $listener) {
+	self::$_listeners[] = $listener;
+    }
+
+    public function notify_listeners($propertyName, $oldValue, $newValue) {
+	foreach(self::$_listeners as $l) {
+	    $l->notifyPropertyChanged($propertyName, $oldValue, $newValue);
+	}
+    }
+
 
 }
 
