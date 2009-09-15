@@ -11,8 +11,13 @@ class person extends orm {
 	protected $address;
 	public $state;
 
-	protected $_has_many = array("books"=>"book");
+	static public function has_many() {
+		return array("books"=>"book");
+	}
 
-	static protected $_types = array("email"=>"Email");
+	static public function types() {
+		return array("email"=>"Email");
+	}
+
 }
 ?>

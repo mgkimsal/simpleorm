@@ -1,22 +1,17 @@
 <?php
-/* 
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+
 class orm {
 
     public $id = NULL;
-    public $dateCreated = NULL:
+    public $dateCreated = NULL;
     public $dateUpdated = NULL;
-
-    static private $path = "";
-    static public $__relations = array();
-    static public $__all_domains = array();
-    protected $_has_one = array();
-    protected $_has_many = array();
-    protected $_props = array();
     protected $__dirty = false;
     protected $__cached = array();
+
+    static private $__path = "";
+    static public $__relations = array();
+    static public $__constraints = array();
+    static public $__all_domains = array();
 
     protected $current_dsn = '';
     protected $table_name = '';
@@ -30,8 +25,50 @@ class orm {
     static protected $_connection = array();
 
 
+    /**
+     * default hasMany relationship
+     * used to influence schema generation
+     */
+    static public function has_many() {
+	return array();
+    }
+
+    /**
+     * default hasOne relationship
+     * used to influence schema generation
+     */
+    static public function has_one() {
+	return array();
+    }
+
+    /**
+     * default constraints mapping
+     * used for validation testing
+     */
+    static public function constraints() {
+	return array();
+    }
+
+    /**
+     * default types mapping
+     * used to influence schema generation
+     * by default, all properties are assumed to be 'strings'
+     * override those in this array
+     *
+     * Example:
+     * array(
+     *	"birthday"=>"date",
+     *	"numFollowers"=>"int",
+     *	"price"=>"float"
+     * );
+     */
+    static public function types() {
+	return array();
+    }
+
+
     static public function set_domain_path($path) {
-	self::$path = $path;
+	self::$__path = $path;
     }
 
 
@@ -43,6 +80,8 @@ class orm {
 	}
     }
 
+
+
     static public function init() {
 	@unlink("./cache");
 	if($f = @file_get_contents("./cache")) {
@@ -51,39 +90,38 @@ class orm {
 	    self::$__relations = $temp['relations'];
 	} else {
 
-	    $files = glob(self::$path."*php");
+	    $files = glob(self::$__path."*php");
+
 	    foreach($files as $file) {
 		$class = basename($file, ".php");
-
-		@include($file);
+		include($file);
 
 		$props = self::__get_props_for_class($class);
-		self::$__relations[$class]['has_many'] = $props['extra']['_has_many'];
-		self::$__relations[$class]['has_one'] = $props['extra']['_has_one'];
+		self::$__relations[$class]['has_many'] = $class::has_many();
+		self::$__relations[$class]['has_one'] = $class::has_one();
+		self::$__constraints[$class] = $class::constraints();
 
-		foreach($props['extra']['_has_many'] as $k=>$v) {
+		foreach(self::$__relations[$class]['has_many'] as $k=>$v) {
 		    self::$__relations[$v]['owned_by'][] = $class;
 		}
-		foreach($props['extra']['_has_one'] as $k=>$v) {
+		foreach(self::$__relations[$class]['has_one'] as $k=>$v) {
 		    self::$__relations[$v]['owned_by'][] = $class;
 		}
-
 		self::$__all_domains[$class] = $class;
-		unset($temp);
 	    }
 
 	    $data['relations'] = self::$__relations;
 	    $data['domains'] = self::$__all_domains;
+	    
 	    file_put_contents("./cache", serialize($data));
 
 	}
     }
 
-    static public function __get_props_for_class($class) {
+    static private function __get_props_for_class($class) {
 	$props = array();
 	$f = new ReflectionClass($class);
 	$properties = $f->getProperties();
-	$props['extra'] = $f->getDefaultProperties();
 	foreach($properties as $prop) {
 	    if($prop->getDeclaringClass()->getName()==$class) {
 		$name = $prop->getName();
@@ -156,17 +194,17 @@ class orm {
 
 
     public function __get_props() {
+	static $props = array();
 	$currentClass = get_class($this);
 	$this->table_name = $currentClass;
-	if(!$this->_props) {
-	    $props = array();
+	if(count($props)==0) {
 	    $f = new ReflectionClass($currentClass);
-	    $return = $f->getProperties();
-	    foreach($return as $prop) {
+	    $temp = $f->getProperties();
+	    foreach($temp as $prop) {
 		if($prop->getDeclaringClass()->getName()==$currentClass) {
 		    $name = $prop->getName();
 		    if(substr($name,0,1)!='_') {
-			$this->_props[$prop->getName()] = $prop;
+			$props[$prop->getName()] = $prop;
 		    }
 		}
 	    }
@@ -174,11 +212,11 @@ class orm {
 	    $relations = orm::$__relations[$currentClass];
 	    if(!empty($relations['owned_by'])) {
 		foreach($relations['owned_by'] as $owner) {
-		    $this->_props[$owner."_id"] = "relation";
+		    $props[$owner."_id"] = "relation";
 		}
 	    }
 	}
-	return $this->_props;
+	return $props;
     }
 
     public function __getSQL() {
@@ -188,7 +226,7 @@ class orm {
 	$props = $this->__get_props();
 	$finalTypes = array();
 
-	eval("\$types={$currentClass}::\$types;");
+	$types = $currentClass::types();
 
 	foreach($props as $key=>$prop) {
 	    if(is_object($prop)) {
@@ -453,10 +491,4 @@ class listener implements ormListener {
 
 }
 
-/**
- * not used, just useful maybe???
- */
-function parseCamelCase($string) {
-    return preg_replace('/(?<=[a-z])(?=[A-Z])/',' ',$string);
-}
 ?>
