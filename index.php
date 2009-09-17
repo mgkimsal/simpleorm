@@ -16,7 +16,8 @@ $r->save();
 $p->add_to_profile($r);
 $p->save();
 
-print_r($p);
+$p->debug();
+#print_r($p);
 exit();
 
 /**

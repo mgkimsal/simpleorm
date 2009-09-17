@@ -3,8 +3,8 @@
 class orm {
 
     public $id = NULL;
-    public $dateCreated = NULL;
-    public $dateUpdated = NULL;
+    public $date_created = NULL;
+    public $date_updated = NULL;
     protected $__dirty = false;
     protected $__cached = array();
 
@@ -12,6 +12,7 @@ class orm {
     static public $__relations = array();
     static public $__constraints = array();
     static public $__all_domains = array();
+    static private $__indent = 0;
 
     protected $__current_dsn = '';
     protected $__table_name = '';
@@ -265,8 +266,8 @@ class orm {
 	$sql .= "create table $currentClass ( \n";
 
 	$sqlDefs[] = "id int(11) auto_increment primary key";
-	$sqlDefs[] = "dateCreated datetime NULL";
-	$sqlDefs[] = "dateUpdated datetime NULL";
+	$sqlDefs[] = "date_created datetime NULL";
+	$sqlDefs[] = "date_updated datetime NULL";
 
 	foreach($finalTypes as $propName=>$type) {
 	    switch($type) {
@@ -364,10 +365,11 @@ class orm {
 	    foreach($p as $key) {
 		$vals[] = $this->$key;
 	    }
-	    $p[] = "dateCreated";
+	    $p[] = "date_created";
 	    $vals[] = date("c");
 	    $sql .= "(".implode(",",$p).") values ";
 	    $sql .= "(".implode(",", array_fill(0,count($p),"?" )).")";
+		$this->date_created = date("c");
 
 	} else {
 	    if($this->__dirty == false ) {
@@ -378,9 +380,10 @@ class orm {
 		$keys[] = "$key=?";
 		$vals[] = $this->$key;
 	    }
-	    $keys[] = "dateUpdated=?";
+	    $keys[] = "date_updated=?";
 	    $vals[] = date("c");
 	    $sql .= implode(",", $keys)." where id=".(int)$this->id;
+		$this->date_updated = date("c");
 	}
 
 	$conn = $this->get_connection();
@@ -420,7 +423,7 @@ class orm {
 	$conn = $this->get_connection();
 	$all = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 	$temp = new $table();
-	$temp->load($a[0]['id']);
+	$temp->load($all[0]['id']);
 	return $temp;
     }
 
@@ -459,6 +462,66 @@ class orm {
 	// cause the magic __get on $target auto-reloads it???
     }
 
+
+/** 
+ * do a print_r style dump of stuff
+ */
+	public function debug() {
+		$tabs = str_repeat("     ",(self::$__indent));
+		$properties = $this->__get_props();
+		$relations = self::$__relations[$this->__table_name];
+		echo "\n$tabs"."Table:".$this->__table_name;
+		echo "\n$tabs"."ID:".$this->id;
+		echo "\n$tabs"."Created:".$this->date_created;
+		echo "\n$tabs"."Updated:".$this->date_updated;
+		echo "\n$tabs"."default properties\n$tabs========\n";
+		foreach($properties as $key=>$val) { 
+			echo $tabs."$key:".$this->$key."\n";
+		}
+		if(count($relations['has_many'])>0) { 
+			echo "\n$tabs"."has many\n$tabs========\n";
+
+			self::$__indent++;
+			$tabs = str_repeat("     ",(self::$__indent));
+			foreach($relations['has_many'] as $key=>$val) {
+				echo $tabs."$key: ";
+				$x = $this->$key;
+				if(is_array($x)) { 
+echo "222debugging ".$x->__table_name."\n";
+					foreach($x as $temp) { 
+						$temp->debug();
+					}
+				} elseif (is_object($x)) {
+echo "debugging ".$x->__table_name."\n";
+					$x->debug();
+				}
+				echo "\n";
+			}
+			self::$__indent--;
+			$tabs = str_repeat("     ",(self::$__indent));
+		}
+		if(count($relations['has_one'])>0) { 
+			echo "\n$tabs"."has one\n$tabs===========\n";
+
+			self::$__indent++;
+			$tabs = str_repeat("     ",(self::$__indent));
+			foreach($relations['has_one'] as $key=>$val) {
+				echo $tabs."$key: ";
+				$x = $this->$key;
+				if(is_array($x)) { 
+					foreach($x as $temp) { 
+						$temp->debug();
+					}
+				} elseif (is_object($x)) {
+					$x->debug();
+				}
+				echo "\n";
+			}
+			self::$__indent--;
+			$tabs = str_repeat("     ",(self::$__indent));
+		}
+
+	}
 
     static function add_listener(ormListener $listener) {
 	self::$_listeners[] = $listener;
