@@ -8,8 +8,16 @@ include("boot.php");
 /**
  * make a new person object
  */
-$p = new Person(array("name"=>"mike", "email"=>"mgkimsal@gmail.com"));
+$p = new Person(array("name"=>"mike")); //, "email"=>"mgkimsal@gmail.com");
 $p->save();
+
+$r = new Profile(array("email"=>"mike@kimsal.com","cellPhone"=>"9194558488"));
+$r->save();
+$p->add_to_profile($r);
+$p->save();
+
+print_r($p);
+exit();
 
 /**
  * make a new book object

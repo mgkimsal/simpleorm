@@ -13,8 +13,8 @@ class orm {
     static public $__constraints = array();
     static public $__all_domains = array();
 
-    protected $current_dsn = '';
-    protected $table_name = '';
+    protected $__current_dsn = '';
+    protected $__table_name = '';
     static protected $_dsn = array();
     static public $_listeners = array();
 
@@ -96,9 +96,11 @@ class orm {
 		include($file);
 
 		$props = self::__get_props_for_class($class);
-		self::$__relations[$class]['has_many'] = $class::has_many();
-		self::$__relations[$class]['has_one'] = $class::has_one();
-		self::$__constraints[$class] = $class::constraints();
+		eval("self::\$__relations[$class]['has_many'] = $class::has_many();");
+		eval("self::\$__relations[$class]['has_one'] = $class::has_one();");
+		eval("self::\$__constraints[$class] = $class::constraints();");
+//		self::$__relations[$class]['has_one'] = {$class}::has_one();
+//		self::$__constraints[$class] = {$class}::constraints();
 
 		foreach(self::$__relations[$class]['has_many'] as $k=>$v) {
 		    self::$__relations[$v]['owned_by'][] = $class;
@@ -156,15 +158,14 @@ class orm {
 	     * todo
 	     * this will load up via SQL on every call to this property - not good
 	     */
-	    if(array_key_exists($name, $this->_has_many)) {
-#				return $this->load_related_many($this->_has_many[$name]);
+	    if(array_key_exists($name, self::$__relations[$this->__table_name]['has_many'])) {
 		if($this->__cached[$name]==null) {
-		    $this->__cached[$name] = $this->load_related_many($this->_has_many[$name]);
+		    $this->__cached[$name] = $this->load_related_many(self::$__relations[$this->__table_name]['has_many'][$name]);
 		}
 		return $this->__cached[$name];
-	    } elseif (array_key_exists($name, $this->_has_one)) {
+	    } elseif (array_key_exists($name, self::$__relations[$this->__table_name]['has_one'])) {
 		if($this->__cached[$name]==null) {
-		    $this->__cached[$name] = $this->load_related_one($this->_has_many[$name]);
+		    $this->__cached[$name] = $this->load_related_one(self::$__relations[$this->__table_name]['has_one'][$name]);
 		}
 		return $this->__cached[$name];
 	    } else {
@@ -195,7 +196,7 @@ class orm {
     public function __get_props() {
 	static $props = array();
 	$currentClass = get_class($this);
-	$this->table_name = $currentClass;
+	$this->__table_name = $currentClass;
 	if(count($props)==0) {
 	    $f = new ReflectionClass($currentClass);
 	    $temp = $f->getProperties();
@@ -225,7 +226,7 @@ class orm {
 	$props = $this->__get_props();
 	$finalTypes = array();
 
-	$types = $currentClass::column_types();
+	eval ("\$types = $currentClass::column_types();");
 
 	foreach($props as $key=>$prop) {
 	    if(is_object($prop)) {
@@ -260,7 +261,8 @@ class orm {
 	/**
 	 * build SQL
 	 */
-	$sql = "create table $currentClass ( \n";
+	$sql = "drop table if exists $currentClass;\n";
+	$sql .= "create table $currentClass ( \n";
 
 	$sqlDefs[] = "id int(11) auto_increment primary key";
 	$sqlDefs[] = "dateCreated datetime NULL";
@@ -306,8 +308,8 @@ class orm {
      * @param string $dsn
      * @return PDO
      */
-    public function get_connection($dsn="default") {
-	$this->current_dsn = $dsn;
+    public function &get_connection($dsn="default") {
+	$this->__current_dsn = $dsn;
 	if(!self::$_connection[$dsn]) {
 	    self::$_connection[$dsn] = new PDO(self::$_dsn[$dsn]['dsn'],
 		self::$_dsn[$dsn]['username'],
@@ -321,7 +323,7 @@ class orm {
 
     public function load($id) {
 	$props = $this->__get_props();
-	$sql = "select * from ".$this->table_name." where id=".(int)$id;
+	$sql = "select * from ".$this->__table_name." where id=".(int)$id;
 	$this->get_one($sql);
 	return true;
     }
@@ -358,7 +360,7 @@ class orm {
 	$p = array_keys($props);
 	$vals = array();
 	if($this->id === null) {
-	    $sql = "insert into ".$this->table_name." ";
+	    $sql = "insert into ".$this->__table_name." ";
 	    foreach($p as $key) {
 		$vals[] = $this->$key;
 	    }
@@ -371,7 +373,7 @@ class orm {
 	    if($this->__dirty == false ) {
 		return true;
 	    }
-	    $sql = "update ".$this->table_name." set ";
+	    $sql = "update ".$this->__table_name." set ";
 	    foreach($p as $key) {
 		$keys[] = "$key=?";
 		$vals[] = $this->$key;
@@ -398,7 +400,7 @@ class orm {
 	    throw new Exception("id is null");
 	}
 
-	$sql = "select id from $table where ".$this->table_name."_id = ".$this->id;
+	$sql = "select id from $table where ".$this->__table_name."_id = ".$this->id;
 	$conn = $this->get_connection();
 	$all = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 	foreach($all as $a) {
@@ -414,7 +416,7 @@ class orm {
 	if($this->id===null) {
 	    throw new Exception("id is null");
 	}
-	$sql = "select id from $table where ".$this->table_name."_id = ".$this->id;
+	$sql = "select id from $table where ".$this->__table_name."_id = ".$this->id;
 	$conn = $this->get_connection();
 	$all = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 	$temp = new $table();
@@ -448,8 +450,8 @@ class orm {
      */
     private function _add_to($target,$object) {
 
-	$key = $this->table_name."_id";
-	echo "adding ".get_class($object)." id ".$object->id." to ".$this->table_name." ".$this->id."\n";
+	$key = $this->__table_name."_id";
+	echo "adding ".get_class($object)." id ".$object->id." to ".$this->__table_name." ".$this->id."\n";
 	$object->$key = $this->id;
 	$object->save();
 	// $this->$target = array_merge($this->$target, array($object));
