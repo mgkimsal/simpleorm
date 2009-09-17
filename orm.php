@@ -151,6 +151,10 @@ class orm {
 	return $temp;
     }
 
+	protected function clear_cache($propertyName) { 
+		$this->__cached[$propertyName] = null;
+	}
+
     public function __get($name) {
 	if(method_exists($this, "get$name")) {
 	    return $this->{"get$name"}();
@@ -160,12 +164,12 @@ class orm {
 	     * this will load up via SQL on every call to this property - not good
 	     */
 	    if(array_key_exists($name, self::$__relations[$this->__table_name]['has_many'])) {
-		if($this->__cached[$name]==null) {
+		if($this->__cached[$name]==null) { 
 		    $this->__cached[$name] = $this->load_related_many(self::$__relations[$this->__table_name]['has_many'][$name]);
 		}
 		return $this->__cached[$name];
 	    } elseif (array_key_exists($name, self::$__relations[$this->__table_name]['has_one'])) {
-		if($this->__cached[$name]==null) {
+		if($this->__cached[$name]==null ) { 
 		    $this->__cached[$name] = $this->load_related_one(self::$__relations[$this->__table_name]['has_one'][$name]);
 		}
 		return $this->__cached[$name];
@@ -454,9 +458,9 @@ class orm {
     private function _add_to($target,$object) {
 
 	$key = $this->__table_name."_id";
-	echo "adding ".get_class($object)." id ".$object->id." to ".$this->__table_name." ".$this->id."\n";
 	$object->$key = $this->id;
 	$object->save();
+	$this->clear_cache($target);
 	// $this->$target = array_merge($this->$target, array($object));
 	// why don't I need to add it in with the array_merge?
 	// cause the magic __get on $target auto-reloads it???
@@ -487,12 +491,10 @@ class orm {
 				echo $tabs."$key: ";
 				$x = $this->$key;
 				if(is_array($x)) { 
-echo "222debugging ".$x->__table_name."\n";
 					foreach($x as $temp) { 
 						$temp->debug();
 					}
 				} elseif (is_object($x)) {
-echo "debugging ".$x->__table_name."\n";
 					$x->debug();
 				}
 				echo "\n";

@@ -17,12 +17,80 @@ Run those in MySQL (hardcoded to mysql right now as a first pass)
 Now run 
 >php index.php
 
+
+The index file above, condensed, looks like this:
+
+	$p = new Person(array("name"=>"mike")); 
+	$p->save();
+	$pr = new Profile(array("email"=>"mike@kimsal.com","cellPhone"=>"123456789"));
+	$pr->save();
+	$p->add_to_profile($pr);
+	$p->save();
+	$b = new Book(array("title"=>"mike's book", "isbn"=>"12355"));
+	$b->save();
+	$b2 = new Book(array("title"=>"mike's book #2", "isbn"=>"w4243"));
+	$b2->save();
+	echo "person has ".count($p->books)." books\n";
+	$p->add_to_books($b);
+	echo "person has ".count($p->books)." books\n";
+	$p->add_to_books($b2);
+	echo "person has ".count($p->books)." books\n";
+	$p->debug();
+
+
 This will output something like:
 
 person has 0 books
-adding book id 17 to person 10
 person has 1 books
-adding book id 18 to person 10
-person has 1 books
+person has 2 books
+
+Table:person
+ID:19
+Created:2009-09-17T16:11:13-04:00
+Updated:
+default properties
+========
+name:mike
+address:
+state:
+
+has many
+========
+     books: 
+     Table:book
+     ID:31
+     Created:2009-09-17 16:11:13
+     Updated:2009-09-17 16:11:13
+     default properties
+     ========
+     title:mike's book
+     isbn:12355
+     person_id:19
+
+     Table:book
+     ID:32
+     Created:2009-09-17 16:11:13
+     Updated:2009-09-17 16:11:13
+     default properties
+     ========
+     title:mike's book #2
+     isbn:w4243
+     person_id:19
+
+
+has one
+===========
+     profile: 
+     Table:profile
+     ID:19
+     Created:2009-09-17 16:11:13
+     Updated:2009-09-17 16:11:13
+     default properties
+     ========
+     email:mike@kimsal.com
+     homePhone:
+     cellPhone:123456789
+     person_id:19
+
 
 
