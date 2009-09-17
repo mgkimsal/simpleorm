@@ -14,7 +14,7 @@ orm::set_dsn(
 	array(
 	    "dsn"=>"mysql:dbname=mgk;host=127.0.0.1;",
 	    "username"=>"root",
-	    "password"=>"beatles"
+	    "password"=>"f4g5F$G%"
 	    )
         )
 );
